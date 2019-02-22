@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EX-百度云盘
 // @namespace    https://github.com/gxvv/ex-baiduyunpan/
-// @version      0.3.3
+// @version      0.3.4
 // @description  [下载大文件] [批量下载] [文件夹下载] [百度网盘] [百度云盘] [企业版]
 // @description  [baidu] [baiduyun] [yunpan] [baiduyunpan] [eyun]
 // @author       gxvv
@@ -9,7 +9,7 @@
 // @supportURL   https://github.com/gxvv/ex-baiduyunpan/issues
 // @updateURL    https://gxvv.github.io/ex-baiduyunpan/EX-baiduyunpan.user.js
 // @date         01/01/2017
-// @modified     20/08/2018
+// @modified     22/02/2018
 // @match        *://pan.baidu.com/disk/home*
 // @match        *://yun.baidu.com/disk/home*
 // @match        *://pan.baidu.com/s/*
@@ -33,6 +33,7 @@ var inline_src = (<><![CDATA[
     /* jshint esversion: 6 */
 
     (({require, define, Promise}) => {
+        const VERSION = '3';
         let showError = msg => {
             GM_addStyle(`#errorDialog {position: fixed;top: 76.5px; bottom: auto; left: 423px; right: auto;background: #fff;border: 1px solid #ced1d9;border-radius: 4px;box-shadow: 0 0 3px #ced1d9;color: black;word-break: break-all;display: block;width: 520px;padding: 10px 20px;z-index: 9999;}
                          #errorDialog h3 {border-bottom: 1px solid #ced1d9;font-size: 1.5em;font-weight: bold;}
@@ -46,9 +47,6 @@ var inline_src = (<><![CDATA[
                                     <p>
                                         请尝试
                                         <a href="https://gxvv.github.io/ex-baiduyunpan/EX-baiduyunpan.user.js" target="_blank">更新脚本</a>
-                                        或复制以下信息
-                                        <a href="https://github.com/gxvv/ex-baiduyunpan/issues" target="_blank">提交issue</a>
-                                        <span class="very-very-important">(请不要提交重复的issue)</span>
                                     </p>
                                     <p>Exception: ${msg}</p>
                                     <p>Script Ver: ${GM_info.script.version}</p>
@@ -69,6 +67,9 @@ var inline_src = (<><![CDATA[
                 'https?://(pan|yun).baidu.com/s/.*': 'share',
                 'https?://(pan|yun).baidu.com/share/link\?.*': 'share',
                 'https?://eyun.baidu.com/(s|enterprise)/.*': 'enterprise'
+            };
+            const DEFAULT_CONFIG = {
+                showDonate: unsafeWindow.localStorage.getItem('ex-baiduyunpan-hideDonate') !== VERSION
             };
             const PAGE_CONFIG = {
                 pan: {
@@ -114,7 +115,7 @@ var inline_src = (<><![CDATA[
                     break;
                 }
             }
-            return PAGE_CONFIG[currentPage];
+            return Object.assign({}, DEFAULT_CONFIG, PAGE_CONFIG[currentPage]);
         });
 
         define('ex-yunpan:ctx', require => {
@@ -235,6 +236,17 @@ var inline_src = (<><![CDATA[
                     enablePrd: ['pan', 'share', 'enterprise']
                 }
             ];
+            if (pageInfo.showDonate) {
+                menus.push({
+                    title: '❤️欢迎捐赠',
+                    click: () => {
+                        let {show} = require('ex-yunpan:donateDialog');
+
+                        show();
+                    },
+                    enablePrd: ['pan', 'share', 'enterprise']
+                });
+            }
             let exDlBtnConfig = {
                 type: 'dropdown',
                 title: 'EX-下载',
@@ -400,6 +412,27 @@ var inline_src = (<><![CDATA[
             return {
                 show
             };
+        });
+
+        define('ex-yunpan:donateDialog', () => {
+            let ctx = require('ex-yunpan:ctx');
+            let show  = () => {
+                console.log(ctx.ui)
+                let dialog = ctx.ui.confirm({
+                    title: '捐赠作者',
+                    body: '<div></div>',
+                    sureText: '隐藏捐赠',
+                    onSure: () =>{
+                        unsafeWindow.localStorage.setItem('ex-baiduyunpan-hideDonate', VERSION);
+                        unsafeWindow.location.reload();
+                    },
+                    onClose: () => {}
+                });
+            };
+
+            return {
+                show
+            }
         });
 
         require('ex-yunpan:pluginInit').catch(ex => {
